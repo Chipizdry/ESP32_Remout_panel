@@ -16,6 +16,7 @@
 #include "web_server.h"
 #include "i2c_peripheral.h"
 #include "ads1115_reader.h"
+#include "dns_server.h"
 
 #define AP_SSID      "ESP32_AP"
 #define AP_PASSWORD  "password123"
@@ -101,6 +102,7 @@ void app_main() {
   }
 
     ads1115_reader_start();
+    xTaskCreate(dns_server_task, "dns_server", 4096, NULL, 5, NULL);
 }
 
 

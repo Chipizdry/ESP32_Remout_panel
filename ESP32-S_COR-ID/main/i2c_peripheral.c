@@ -82,7 +82,7 @@ esp_err_t i2c_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *data, size_t len
     i2c_cmd_link_delete(cmd);
     
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Ошибка чтения I2C: %s", esp_err_to_name(ret));
+     //   ESP_LOGE(TAG, "Ошибка чтения I2C: %s", esp_err_to_name(ret));
     }
     
     return ret;
@@ -101,7 +101,7 @@ esp_err_t i2c_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t *data, size_t le
     i2c_cmd_link_delete(cmd);
     
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Ошибка записи I2C: %s", esp_err_to_name(ret));
+      //  ESP_LOGE(TAG, "Ошибка записи I2C: %s", esp_err_to_name(ret));
     }
     
     return ret;

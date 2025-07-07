@@ -1,4 +1,4 @@
-# Install script for directory: D:/GitHub/ESP32-S_COR-ID/main
+# Install script for directory: D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

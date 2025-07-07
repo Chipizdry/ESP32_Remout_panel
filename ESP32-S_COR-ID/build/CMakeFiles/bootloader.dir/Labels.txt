@@ -1,13 +1,13 @@
 # Target labels
  bootloader
 # Source files and their labels
-D:/GitHub/ESP32-S_COR-ID/build/CMakeFiles/bootloader
-D:/GitHub/ESP32-S_COR-ID/build/CMakeFiles/bootloader.rule
-D:/GitHub/ESP32-S_COR-ID/build/CMakeFiles/bootloader-complete.rule
-D:/GitHub/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
-D:/GitHub/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
-D:/GitHub/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
-D:/GitHub/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
-D:/GitHub/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
-D:/GitHub/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
-D:/GitHub/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/CMakeFiles/bootloader
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/CMakeFiles/bootloader.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/CMakeFiles/bootloader-complete.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule

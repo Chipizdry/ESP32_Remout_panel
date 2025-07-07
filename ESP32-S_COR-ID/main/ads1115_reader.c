@@ -31,7 +31,7 @@ static void ads1115_read_channel(uint8_t channel, float *voltage_out) {
 
     uint8_t result[2] = {0};
     if (i2c_read(ADS1115_ADDR, ADS1115_REG_CONVERT, result, 2) != ESP_OK) {
-        ESP_LOGE(TAG, "Ошибка чтения канала %d", channel);
+      //  ESP_LOGE(TAG, "Ошибка чтения канала %d", channel);
         return;
     }
 
@@ -46,7 +46,7 @@ static void ads1115_task(void *pvParameters) {
         }
 
         for (uint8_t i = 0; i < ADS1115_NUM_CHANNELS; i++) {
-            ESP_LOGI(TAG, "CH%d = %.3f V", i, ads1115_voltages[i]);
+          //  ESP_LOGI(TAG, "CH%d = %.3f V", i, ads1115_voltages[i]);
         }
 
         vTaskDelay(pdMS_TO_TICKS(1000)); // 1 секунда
