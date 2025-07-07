@@ -67,7 +67,7 @@ void dns_server_task(void *pvParameters) {
         inet_pton(AF_INET, DNS_RESPONSE_IP, &addr);
         memcpy(&buffer[query_len], &addr.s_addr, 4);
         query_len += 4;
-
+      
         sendto(sock, buffer, query_len, 0, (struct sockaddr *)&client_addr, client_len);
     }
 }
