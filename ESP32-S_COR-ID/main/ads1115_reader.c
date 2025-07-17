@@ -46,7 +46,7 @@ static void ads1115_task(void *pvParameters) {
         }
 
         for (uint8_t i = 0; i < ADS1115_NUM_CHANNELS; i++) {
-          //  ESP_LOGI(TAG, "CH%d = %.3f V", i, ads1115_voltages[i]);
+            ESP_LOGI(TAG, "CH%d = %.3f V", i, ads1115_voltages[i]);
         }
 
         vTaskDelay(pdMS_TO_TICKS(1000)); // 1 секунда

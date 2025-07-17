@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "dns_server.c" "ads1115_reader.c" "main.c" "web_server.c" "i2c_peripheral.c"   "ads1115_reader.c"  "dns_server.c"
+    SRCS "rgb_led.c" "dns_server.c" "ads1115_reader.c" "main.c" "web_server.c" "i2c_peripheral.c"   "ads1115_reader.c"  "dns_server.c"  "rgb_led.c"
     INCLUDE_DIRS "."
     REQUIRES 
     esp_littlefs

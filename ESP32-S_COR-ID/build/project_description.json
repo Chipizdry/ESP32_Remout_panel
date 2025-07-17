@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "esp32_s_cor_id",
-    "project_version":    "fa06fc9-dirty",
+    "project_version":    "dea2acc-dirty",
     "project_path":       "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID",
     "idf_path":           "D:/Espressif/frameworks/esp-idf-v5.3.1/v5.3.1/esp-idf",
     "build_dir":          "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build",
@@ -1195,7 +1195,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/main/libmain.a",
-            "sources": [ "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/dns_server.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/ads1115_reader.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/main.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/web_server.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/i2c_peripheral.c" ],
+            "sources": [ "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/rgb_led.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/dns_server.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/ads1115_reader.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/main.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/web_server.c", "D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/main/i2c_peripheral.c" ],
             "include_dirs": [ "." ]
         },
         "mbedtls": {

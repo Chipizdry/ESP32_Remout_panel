@@ -10,9 +10,41 @@
 static const char *TAG = "WebServer";
 static httpd_handle_t server = NULL;
 
+
+static void log_request_headers(httpd_req_t *req) {
+    const char *headers_to_log[] = {
+        "User-Agent",
+        "Cookie",
+        "Host",
+        "Accept",
+        "Connection",
+        "Cache-Control",
+        "Authorization",
+        NULL
+    };
+
+    for (int i = 0; headers_to_log[i] != NULL; i++) {
+        char buf[256];
+        if (httpd_req_get_hdr_value_str(req, headers_to_log[i], buf, sizeof(buf)) == ESP_OK) {
+            ESP_LOGI("HTTP_HEADERS", "%s: %s", headers_to_log[i], buf);
+        }
+    }
+}
+
+
+static esp_err_t wildcard_handler(httpd_req_t *req) {
+    ESP_LOGW(TAG, "Wildcard redirect for URI: %s", req->uri);
+    log_request_headers(req);
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/main.html");
+    httpd_resp_set_hdr(req, "Content-Length", "0");
+    return httpd_resp_send(req, NULL, 0);
+}
+
 // Обработчик для Windows Connect Test (302 → main.html)
 static esp_err_t windows_connect_test_handler(httpd_req_t *req) {
     ESP_LOGW(TAG, "Windows connect test redirect → /main.html");
+    log_request_headers(req);
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/main.html");
     httpd_resp_set_hdr(req, "Content-Length", "0");
@@ -30,14 +62,19 @@ static esp_err_t ncsi_handler(httpd_req_t *req) {
 
 // Обработчик для Android Captive Portal
 static esp_err_t android_captive_handler(httpd_req_t *req) {
-    ESP_LOGI(TAG, "Handling Android captive portal check");
-    httpd_resp_set_status(req, "204 No Content");
+    ESP_LOGI(TAG, "Handling Android captive portal check - redirecting to main.html");
+    log_request_headers(req); 
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/main.html");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+    httpd_resp_set_hdr(req, "Content-Length", "0");
     return httpd_resp_send(req, NULL, 0);
 }
 
 // Обработчик для Apple Captive Portal
 static esp_err_t apple_captive_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Redirecting Apple captive portal to /main.html");
+    log_request_headers(req);
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/main.html");
     return httpd_resp_send(req, NULL, 0);
@@ -46,6 +83,7 @@ static esp_err_t apple_captive_handler(httpd_req_t *req) {
 // Обработчик /redirect (Windows иногда сам вызывает)
 static esp_err_t redirect_fallback_handler(httpd_req_t *req) {
     ESP_LOGW(TAG, "Handling /redirect → /main.html");
+    log_request_headers(req);
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/main.html");
     httpd_resp_set_hdr(req, "Content-Length", "0");
@@ -93,6 +131,10 @@ static esp_err_t file_get_handler(httpd_req_t *req) {
     return httpd_resp_send_chunk(req, NULL, 0);
 }
 
+
+
+
+
 void start_webserver(void) {
     if (server) {
         ESP_LOGW(TAG, "Server already running");
@@ -100,9 +142,16 @@ void start_webserver(void) {
     }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+   
     config.server_port = 80;
     config.max_uri_handlers = 16;
     config.lru_purge_enable = true;
+    config.recv_wait_timeout = 10;
+    config.send_wait_timeout = 10;
+    config.max_resp_headers = 16;
+    config.max_open_sockets = 7;
+    config.backlog_conn = 5;
+    config.uri_match_fn = httpd_uri_match_wildcard;
 
     if (httpd_start(&server, &config) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start server");
@@ -129,6 +178,18 @@ void start_webserver(void) {
         if (httpd_register_uri_handler(server, &handlers[i]) != ESP_OK) {
             ESP_LOGE(TAG, "Failed to register handler for %s", handlers[i].uri);
         }
+    }
+
+
+    httpd_uri_t catch_all_handler = {
+        .uri      = "/*",
+        .method   = HTTP_GET,
+        .handler  = wildcard_handler,
+        .user_ctx = NULL
+    };
+
+    if (httpd_register_uri_handler(server, &catch_all_handler) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to register wildcard handler");
     }
 
     ESP_LOGI(TAG, "HTTP server started on port %d", config.server_port);

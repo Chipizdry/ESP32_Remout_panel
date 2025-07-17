@@ -17,6 +17,9 @@
 #include "i2c_peripheral.h"
 #include "ads1115_reader.h"
 #include "dns_server.h"
+#include "rgb_led.h"
+
+
 
 #define AP_SSID      "ESP32_AP"
 #define AP_PASSWORD  "password123"
@@ -93,6 +96,8 @@ void app_main() {
     check_files();
     start_webserver();
     ESP_ERROR_CHECK(i2c_master_init());
+    init_rgb_pwm();
+
 
   // Сканирование I2C-шины
   uint8_t found_devices[10];
