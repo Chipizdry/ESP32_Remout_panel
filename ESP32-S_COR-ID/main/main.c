@@ -18,8 +18,14 @@
 #include "ads1115_reader.h"
 #include "dns_server.h"
 #include "rgb_led.h"
+#include "bt_hid.h"
+#include <stddef.h>  // Для size_t
+#include <stdbool.h> 
+#include "esp_bt.h"
+#include "esp_bt_main.h"
+#include "esp_bt_device.h"
 
-
+#define ENABLE_WIFI 0
 
 #define AP_SSID      "ESP32_AP"
 #define AP_PASSWORD  "password123"
@@ -29,6 +35,8 @@
 #define BASE_PATH "/littlefs"
 #define PARTITION_LABEL "web" 
 static const char *TAG = "WiFi Mode Switch";
+
+
 
 void init_littlefs();
 void check_files();
@@ -74,6 +82,9 @@ void switch_wifi_mode(wifi_mode_t mode, const char *sta_ssid, const char *sta_pa
 }
 
 void app_main() {
+    esp_log_level_set("BT_HID", ESP_LOG_DEBUG);
+    esp_log_level_set("BT", ESP_LOG_DEBUG);
+
     // Инициализация NVS (обязательно для Wi-Fi)
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES) {
@@ -82,6 +93,30 @@ void app_main() {
     }
     ESP_ERROR_CHECK(ret);
 
+     // Инициализация Bluetooth-контроллера
+     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+     if (esp_bt_controller_init(&bt_cfg) != ESP_OK) {
+         ESP_LOGE(TAG, "Failed to initialize Bluetooth controller");
+         return;
+     }
+ 
+     if (esp_bt_controller_enable(ESP_BT_MODE_BTDM) != ESP_OK) {
+         ESP_LOGE(TAG, "Failed to enable Bluetooth controller");
+         return;
+     }
+ 
+     // Инициализация Bluedroid
+     if (esp_bluedroid_init() != ESP_OK) {
+         ESP_LOGE(TAG, "Failed to initialize Bluedroid");
+         return;
+     }
+ 
+     if (esp_bluedroid_enable() != ESP_OK) {
+         ESP_LOGE(TAG, "Failed to enable Bluedroid");
+         return;
+     }
+
+     #if ENABLE_WIFI  
     // Инициализация Wi-Fi и событий
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -92,32 +127,44 @@ void app_main() {
 
     // Старт в режиме AP при загрузке
     wifi_init_ap();
+   
+    start_webserver();
+   
+    #endif
     init_littlefs();
     check_files();
-    start_webserver();
     ESP_ERROR_CHECK(i2c_master_init());
     init_rgb_pwm();
 
+#ifndef CONFIG_BT_ENABLED
+    ESP_LOGW("MAIN", "Bluetooth is disabled in configuration");
+#else
+    // Инициализация Bluetooth HID
+    bt_hid_init();
+    // Запуск поиска HID устройств
+    bt_hid_start_discovery();
+   
+#endif
 
-  // Сканирование I2C-шины
-  uint8_t found_devices[10];
-  int device_count = i2c_scan(found_devices, 10);
-  for (int i = 0; i < device_count; i++) {
-      ESP_LOGI("I2C", "Устройство %d: адрес 0x%02X", i + 1, found_devices[i]);
-  }
+    // Сканирование I2C-шины
+    uint8_t found_devices[10];
+    int device_count = i2c_scan(found_devices, 10);
+    for (int i = 0; i < device_count; i++) {
+        ESP_LOGI("I2C", "Устройство %d: адрес 0x%02X", i + 1, found_devices[i]);
+    }
 
     ads1115_reader_start();
+    #if ENABLE_WIFI
     xTaskCreate(dns_server_task, "dns_server", 4096, NULL, 5, NULL);
+    #endif
 }
-
-
 
 void init_littlefs() {
     esp_vfs_littlefs_conf_t conf = {
         .base_path = BASE_PATH,
         .partition_label = PARTITION_LABEL,
         .format_if_mount_failed = true,
-                .dont_mount = false
+        .dont_mount = false
     };
 
     esp_err_t ret = esp_vfs_littlefs_register(&conf);

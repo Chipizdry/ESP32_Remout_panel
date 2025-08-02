@@ -2,7 +2,7 @@
   "configurations": [
     {
       "name": "ESP32",
-     "includePath": [
+      "includePath": [
         "${workspaceFolder}/**",
         "D:/Espressif/frameworks/esp-idf-v5.3.1/components/**"
       ],
@@ -10,7 +10,7 @@
         "ESP_PLATFORM",
         "IDF_VER=\"v5.2\""
       ],
-      "compilerPath": "D:/Espressif/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",
+      "compilerPath": "${config:idf.toolsPathWin}\\tools\\xtensa-esp-elf\\esp-13.2.0_20240530\\xtensa-esp-elf\\bin\\xtensa-esp32-elf-gcc.exe",
       "cStandard": "c11",
       "cppStandard": "c++17",
       "intelliSenseMode": "gcc-x64"
