@@ -17,8 +17,8 @@
     "IDF_TARGET": "esp32"
   },
   "idf.flashType": "UART",
-  "idf.monitorPort": "COM3",
-  "idf.portWin": "COM3",
+  "idf.monitorPort": "COM4",
+  "idf.portWin": "COM4",
   "files.associations": {
     "stdlib.h": "c",
     "rgb_led.h": "c"
