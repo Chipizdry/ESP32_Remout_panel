@@ -1,2 +1,2 @@
 --flash_mode dio --flash_freq 80m --flash_size detect
-0x320000 web.bin
+0x360000 web.bin

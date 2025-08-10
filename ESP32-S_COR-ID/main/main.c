@@ -19,6 +19,12 @@
 #include "dns_server.h"
 #include "rgb_led.h"
 
+#include "esp_system.h"
+#include "esp_bt.h"
+#include "esp_bt_main.h"
+#include "esp_gap_ble_api.h"
+#include "esp_gatts_api.h"
+#include "telemetry.h" 
 
 
 #define AP_SSID      "ESP32_AP"
@@ -29,6 +35,11 @@
 #define BASE_PATH "/littlefs"
 #define PARTITION_LABEL "web" 
 static const char *TAG = "WiFi Mode Switch";
+
+
+extern void telemetry_init(void);
+
+extern void telemetry_start(void);
 
 void init_littlefs();
 void check_files();
@@ -98,7 +109,11 @@ void app_main() {
     ESP_ERROR_CHECK(i2c_master_init());
     init_rgb_pwm();
 
+    ESP_LOGI("MAIN", "Free heap: %" PRIu32, esp_get_free_heap_size());
 
+    telemetry_init();
+     
+    telemetry_start();
   // Сканирование I2C-шины
   uint8_t found_devices[10];
   int device_count = i2c_scan(found_devices, 10);

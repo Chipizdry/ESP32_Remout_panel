@@ -555,6 +555,7 @@ D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/esp_wifi/CMakeFiles/li
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/esp_wifi/CMakeFiles/install.dir
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/esp_wifi/CMakeFiles/install/local.dir
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/esp_wifi/CMakeFiles/install/strip.dir
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/bt/CMakeFiles/__idf_bt.dir
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/bt/CMakeFiles/edit_cache.dir
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/bt/CMakeFiles/rebuild_cache.dir
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/bt/CMakeFiles/list_install_components.dir

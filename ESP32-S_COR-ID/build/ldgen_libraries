@@ -51,6 +51,7 @@ D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/esp_netif/libesp_netif
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/wpa_supplicant/libwpa_supplicant.a
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/esp_coex/libesp_coex.a
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/esp_wifi/libesp_wifi.a
+D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/bt/libbt.a
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/unity/libunity.a
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/cmock/libcmock.a
 D:/GitHub/ESP32_Remout_panel/ESP32-S_COR-ID/build/esp-idf/console/libconsole.a
