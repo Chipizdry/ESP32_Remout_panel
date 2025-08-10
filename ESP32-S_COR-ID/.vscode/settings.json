@@ -21,6 +21,8 @@
   "idf.portWin": "COM4",
   "files.associations": {
     "stdlib.h": "c",
-    "rgb_led.h": "c"
+    "rgb_led.h": "c",
+    "telemetry.h": "c",
+    "esp_wifi.h": "c"
   }
 }

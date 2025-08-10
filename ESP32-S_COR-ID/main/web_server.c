@@ -6,10 +6,19 @@
 #include "esp_netif.h"
 #include "esp_vfs.h"
 #include "lwip/sockets.h"
+#include "nvs_flash.h"
+#include "nvs.h"
+#include "cJSON.h"
 
 static const char *TAG = "WebServer";
 static httpd_handle_t server = NULL;
 
+void wifi_init_sta(const char *ssid, const char *pass);
+void wifi_init_ap(void);
+
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
+
+static esp_err_t set_wifi_handler(httpd_req_t *req);
 
 static void log_request_headers(httpd_req_t *req) {
     const char *headers_to_log[] = {
@@ -30,6 +39,23 @@ static void log_request_headers(httpd_req_t *req) {
         }
     }
 }
+
+
+
+// Переключение между режимами
+void switch_wifi_mode(wifi_mode_t mode, const char *ssid, const char *pass) {
+    ESP_ERROR_CHECK(esp_wifi_stop());
+    ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
+
+    if (mode == WIFI_MODE_STA) {
+        wifi_init_sta(ssid, pass);
+    } else if (mode == WIFI_MODE_AP) {
+        wifi_init_ap();
+    }
+}   
+
+
+
 
 
 static esp_err_t wildcard_handler(httpd_req_t *req) {
@@ -134,6 +160,109 @@ static esp_err_t file_get_handler(httpd_req_t *req) {
 
 
 
+static esp_err_t set_wifi_handler(httpd_req_t *req) {
+    char buf[128];
+    int len = httpd_req_recv(req, buf, sizeof(buf)-1);
+    if (len <= 0) return ESP_FAIL;
+    buf[len] = '\0';
+
+    char ssid[33] = {0}, pass[65] = {0};
+    cJSON *json = cJSON_Parse(buf);
+    if (!json) return ESP_FAIL;
+    cJSON *js_ssid = cJSON_GetObjectItem(json, "ssid");
+    cJSON *js_pass = cJSON_GetObjectItem(json, "password");
+    if (cJSON_IsString(js_ssid) && cJSON_IsString(js_pass)) {
+        strncpy(ssid, js_ssid->valuestring, sizeof(ssid)-1);
+        strncpy(pass, js_pass->valuestring, sizeof(pass)-1);
+
+        // Сохраняем в NVS
+        nvs_handle_t nvs;
+        if (nvs_open("wifi", NVS_READWRITE, &nvs) == ESP_OK) {
+            nvs_set_str(nvs, "ssid", ssid);
+            nvs_set_str(nvs, "pass", pass);
+            nvs_commit(nvs);
+            nvs_close(nvs);
+        }
+
+        // Переключаемся в STA
+        switch_wifi_mode(WIFI_MODE_STA, ssid, pass);
+
+        httpd_resp_sendstr(req, "Wi-Fi settings saved, trying to connect...");
+    } else {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+    }
+    cJSON_Delete(json);
+    return ESP_OK;
+}
+
+// Обработчик событий Wi-Fi и IP
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,
+    int32_t event_id, void* event_data)
+{
+if (event_base == WIFI_EVENT) {
+if (event_id == WIFI_EVENT_STA_START) {
+esp_wifi_connect();
+ESP_LOGI(TAG, "STA started, connecting...");
+} else if (event_id == WIFI_EVENT_STA_DISCONNECTED) {
+ESP_LOGW(TAG, "STA disconnected, retrying...");
+esp_wifi_connect();
+}
+} 
+else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
+}
+}
+
+
+// Запуск станции
+void wifi_init_sta(const char *ssid, const char *pass) {
+    esp_netif_create_default_wifi_sta();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
+
+    wifi_config_t sta_config = {0};
+    strncpy((char*)sta_config.sta.ssid, ssid, sizeof(sta_config.sta.ssid));
+    strncpy((char*)sta_config.sta.password, pass, sizeof(sta_config.sta.password));
+
+    sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+}
+
+
+// Запуск точки доступа
+void wifi_init_ap(void) {
+    esp_netif_create_default_wifi_ap();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    wifi_config_t ap_config = {
+        .ap = {
+            .ssid = "ESP32_AP",
+            .ssid_len = strlen("ESP32_AP"),
+            .channel = 1,
+            .password = "12345678",
+            .max_connection = 4,
+            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+        }
+    };
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(TAG, "AP started: SSID:%s, PASS:%s", ap_config.ap.ssid, ap_config.ap.password);
+}
+
+
 
 void start_webserver(void) {
     if (server) {
@@ -192,5 +321,14 @@ void start_webserver(void) {
         ESP_LOGE(TAG, "Failed to register wildcard handler");
     }
 
+    httpd_uri_t set_wifi_uri = {
+        .uri = "/set_wifi",
+        .method = HTTP_POST,
+        .handler = set_wifi_handler
+    };
+    httpd_register_uri_handler(server, &set_wifi_uri);
+
     ESP_LOGI(TAG, "HTTP server started on port %d", config.server_port);
 }
+
+

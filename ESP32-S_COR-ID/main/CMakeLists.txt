@@ -12,6 +12,7 @@ idf_component_register(
     esp_http_server
     esp_event lwip
     bt
+    json
 )
 include_directories(
     "D:/Espressif/frameworks/esp-idf-v5.3.1/v5.3.1/esp-idf/components/esp_littlefs/src/littlefs"

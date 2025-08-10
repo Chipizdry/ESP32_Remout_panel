@@ -3,13 +3,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ESP32 Control Panel</title>
+    <title>COR-Velo Control Panel</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to ESP32 Web Server</h1>
-        <p>This page is served from LittleFS</p>
+        <h2>Подключение к Wi-Fi</h2>
+        <form id="wifiForm">
+            <label>SSID: <input type="text" name="ssid" required></label><br>
+            <label>Password: <input type="password" name="password"></label><br>
+            <button type="submit">Подключиться</button>
+        </form>
     </div>
     <script src="/script.js"></script>
 </body>

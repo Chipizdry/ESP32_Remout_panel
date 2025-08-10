@@ -26,8 +26,14 @@
 #include "esp_gatts_api.h"
 #include "telemetry.h" 
 
+#include "cJSON.h"
 
-#define AP_SSID      "ESP32_AP"
+char ssid[33], pass[65];
+size_t len;
+nvs_handle_t nvs;
+bool creds_found = false;
+
+#define AP_SSID      "COR-Velo"
 #define AP_PASSWORD  "password123"
 #define AP_CHANNEL   6
 #define MAX_CONN     8
@@ -44,45 +50,7 @@ extern void telemetry_start(void);
 void init_littlefs();
 void check_files();
 
-void wifi_init_ap() {
-    wifi_config_t wifi_config = {
-        .ap = {
-            .ssid = AP_SSID,
-            .password = AP_PASSWORD,
-            .ssid_len = strlen(AP_SSID),
-            .channel = AP_CHANNEL,
-            .max_connection = MAX_CONN,
-            .authmode = WIFI_AUTH_WPA2_PSK
-        }
-    };
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_LOGI(TAG, "AP mode started. SSID: %s", AP_SSID);
-}
-
-void switch_wifi_mode(wifi_mode_t mode, const char *sta_ssid, const char *sta_password) {
-    ESP_ERROR_CHECK(esp_wifi_stop());
-    ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
-
-    if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
-        wifi_config_t sta_config = {
-            .sta = {
-                .threshold = {
-                    .authmode = WIFI_AUTH_WPA2_PSK
-                }
-            }
-        };
-        strncpy((char*)sta_config.sta.ssid, sta_ssid, sizeof(sta_config.sta.ssid));
-        strncpy((char*)sta_config.sta.password, sta_password, sizeof(sta_config.sta.password));
-        
-        ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config));
-    }
-
-    ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_LOGI(TAG, "Switched to mode: %d", mode);
-}
 
 void app_main() {
     // Инициализация NVS (обязательно для Wi-Fi)
@@ -101,8 +69,29 @@ void app_main() {
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
+
+    if (nvs_open("wifi", NVS_READONLY, &nvs) == ESP_OK) {
+        len = sizeof(ssid);
+        if (nvs_get_str(nvs, "ssid", ssid, &len) == ESP_OK) {
+            len = sizeof(pass);
+            if (nvs_get_str(nvs, "pass", pass, &len) == ESP_OK) {
+                creds_found = true;
+            }
+        }
+        nvs_close(nvs);
+    }
+    
+    if (creds_found) {
+        ESP_LOGI(TAG, "Connecting to saved Wi-Fi: %s", ssid);
+        switch_wifi_mode(WIFI_MODE_STA, ssid, pass);
+    } else {
+        wifi_init_ap(); // нет сохранённых — запускаем AP
+    }
+    
+
+
     // Старт в режиме AP при загрузке
-    wifi_init_ap();
+  //  wifi_init_ap();
     init_littlefs();
     check_files();
     start_webserver();
