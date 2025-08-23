@@ -15,6 +15,16 @@
             <label>SSID: <input type="text" name="ssid" required></label><br>
             <label>Password: <input type="password" name="password"></label><br>
             <button type="submit">Подключиться</button>
+
+
+            <label>Режим Wi-Fi:
+                <select name="mode" required>
+                    <option value="STA">STA</option>
+                    <option value="AP">AP</option>
+                    <option value="STA_AP">STA+AP</option>
+                </select>
+            </label><br>
+            <button type="submit">Сохранить</button>
         </form>
     </div>
     <script src="/script.js"></script>

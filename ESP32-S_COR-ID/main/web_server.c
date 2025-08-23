@@ -51,8 +51,11 @@ void switch_wifi_mode(wifi_mode_t mode, const char *ssid, const char *pass) {
         wifi_init_sta(ssid, pass);
     } else if (mode == WIFI_MODE_AP) {
         wifi_init_ap();
+    } else if (mode == WIFI_MODE_APSTA) {
+        wifi_init_ap();
+        wifi_init_sta(ssid, pass);
     }
-}   
+}
 
 
 
@@ -159,38 +162,47 @@ static esp_err_t file_get_handler(httpd_req_t *req) {
 
 
 
-
 static esp_err_t set_wifi_handler(httpd_req_t *req) {
-    char buf[128];
+    char buf[256];
     int len = httpd_req_recv(req, buf, sizeof(buf)-1);
     if (len <= 0) return ESP_FAIL;
     buf[len] = '\0';
 
-    char ssid[33] = {0}, pass[65] = {0};
+    char ssid[33] = {0}, pass[65] = {0}, mode_str[16] = {0};
     cJSON *json = cJSON_Parse(buf);
     if (!json) return ESP_FAIL;
+
     cJSON *js_ssid = cJSON_GetObjectItem(json, "ssid");
     cJSON *js_pass = cJSON_GetObjectItem(json, "password");
-    if (cJSON_IsString(js_ssid) && cJSON_IsString(js_pass)) {
+    cJSON *js_mode = cJSON_GetObjectItem(json, "mode");
+
+    if (cJSON_IsString(js_ssid) && cJSON_IsString(js_pass) && cJSON_IsString(js_mode)) {
         strncpy(ssid, js_ssid->valuestring, sizeof(ssid)-1);
         strncpy(pass, js_pass->valuestring, sizeof(pass)-1);
+        strncpy(mode_str, js_mode->valuestring, sizeof(mode_str)-1);
+
+        wifi_mode_t mode = WIFI_MODE_STA;
+        if (strcmp(mode_str, "STA") == 0) mode = WIFI_MODE_STA;
+        else if (strcmp(mode_str, "AP") == 0) mode = WIFI_MODE_AP;
+        else if (strcmp(mode_str, "STA_AP") == 0) mode = WIFI_MODE_APSTA;
 
         // Сохраняем в NVS
         nvs_handle_t nvs;
         if (nvs_open("wifi", NVS_READWRITE, &nvs) == ESP_OK) {
             nvs_set_str(nvs, "ssid", ssid);
             nvs_set_str(nvs, "pass", pass);
+            nvs_set_str(nvs, "mode", mode_str);
             nvs_commit(nvs);
             nvs_close(nvs);
         }
 
-        // Переключаемся в STA
-        switch_wifi_mode(WIFI_MODE_STA, ssid, pass);
+        switch_wifi_mode(mode, ssid, pass);
 
-        httpd_resp_sendstr(req, "Wi-Fi settings saved, trying to connect...");
+        httpd_resp_sendstr(req, "Wi-Fi settings saved and mode switched");
     } else {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     }
+
     cJSON_Delete(json);
     return ESP_OK;
 }
