@@ -16,7 +16,7 @@ static httpd_handle_t server = NULL;
 void wifi_init_sta(const char *ssid, const char *pass);
 void wifi_init_ap(void);
 
-static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
+void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
 
 static esp_err_t set_wifi_handler(httpd_req_t *req);
 
@@ -208,7 +208,7 @@ static esp_err_t set_wifi_handler(httpd_req_t *req) {
 }
 
 // Обработчик событий Wi-Fi и IP
-static void wifi_event_handler(void* arg, esp_event_base_t event_base,
+ void wifi_event_handler(void* arg, esp_event_base_t event_base,
     int32_t event_id, void* event_data)
 {
 if (event_base == WIFI_EVENT) {
@@ -229,14 +229,6 @@ ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
 
 // Запуск станции
 void wifi_init_sta(const char *ssid, const char *pass) {
-    esp_netif_create_default_wifi_sta();
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
-
     wifi_config_t sta_config = {0};
     strncpy((char*)sta_config.sta.ssid, ssid, sizeof(sta_config.sta.ssid));
     strncpy((char*)sta_config.sta.password, pass, sizeof(sta_config.sta.password));
@@ -251,11 +243,6 @@ void wifi_init_sta(const char *ssid, const char *pass) {
 
 // Запуск точки доступа
 void wifi_init_ap(void) {
-    esp_netif_create_default_wifi_ap();
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
     wifi_config_t ap_config = {
         .ap = {
             .ssid = "ESP32_AP",
@@ -273,7 +260,6 @@ void wifi_init_ap(void) {
 
     ESP_LOGI(TAG, "AP started: SSID:%s, PASS:%s", ap_config.ap.ssid, ap_config.ap.password);
 }
-
 
 
 void start_webserver(void) {

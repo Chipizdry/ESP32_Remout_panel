@@ -2,18 +2,25 @@
   "configurations": [
     {
       "name": "ESP32",
-     "includePath": [
+      "includePath": [
         "${workspaceFolder}/**",
-        "D:/Espressif/frameworks/esp-idf-v5.3.1/components/**"
+        "${workspaceFolder}/build/config/**",
+        "D:/Espressif/frameworks/esp-idf-v5.3.1/components/**",
+        "D:/Espressif/frameworks/esp-idf-v5.3.1/v5.3.1/esp-idf/components/**"
       ],
       "defines": [
         "ESP_PLATFORM",
-        "IDF_VER=\"v5.2\""
+        "IDF_VER=\"v5.3.1\"",
+        "__ESP32__",
+        "CONFIG_LOG_MAXIMUM_LEVEL=5",
+        "CONFIG_FREERTOS_HZ=1000"
       ],
       "compilerPath": "D:/Espressif/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",
       "cStandard": "c11",
       "cppStandard": "c++17",
-      "intelliSenseMode": "gcc-x64"
+      "intelliSenseMode": "gcc-x64",
+      "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+      "configurationProvider": "ms-vscode.cmake-tools"
     }
   ],
   "version": 4

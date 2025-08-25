@@ -1,11 +1,21 @@
 {
   "C_Cpp.default.defines": [
-    "IDF_PATH=\"D:/Espressif/frameworks/esp-idf-v5.3.1\""
+    "IDF_PATH=\"D:/Espressif/frameworks/esp-idf-v5.3.1\"",
+    "CONFIG_LOG_MAXIMUM_LEVEL=5",
+    "CONFIG_FREERTOS_HZ=1000",
+    "__ESP32__"
   ],
   "C_Cpp.default.includePath": [
     "${workspaceFolder}/**",
-    "D:/Espressif/frameworks/esp-idf-v5.3.1/components/**"
+    "${workspaceFolder}/build/config/**",
+    "D:/Espressif/frameworks/esp-idf-v5.3.1/components/**",
+    "D:/Espressif/frameworks/esp-idf-v5.3.1/v5.3.1/esp-idf/components/**"
   ],
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+  "C_Cpp.autocomplete": "default",
+  "C_Cpp.errorSquiggles": "enabled",
+  "C_Cpp.intelliSenseEngine": "default",
+  
   "idf.openOcdConfigs": [
     "interface/ftdi/esp32_devkitj_v1.cfg",
     "target/esp32.cfg"
@@ -19,6 +29,7 @@
   "idf.flashType": "UART",
   "idf.monitorPort": "COM4",
   "idf.portWin": "COM4",
+  
   "files.associations": {
     "stdlib.h": "c",
     "rgb_led.h": "c",
