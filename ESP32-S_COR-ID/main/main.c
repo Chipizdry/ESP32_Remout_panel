@@ -63,25 +63,31 @@ void app_main() {
 
     // Инициализация Wi-Fi и событий
     ESP_ERROR_CHECK(esp_netif_init());
-ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+   // esp_netif_create_default_wifi_ap();
 
-// Создай netif один раз (можно создать сразу оба, если потом планируется AP<->STA переключение)
-esp_netif_t *ap_netif  = esp_netif_create_default_wifi_ap();
-esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-// Зарегистрируй обработчики СРАЗУ ЗДЕСЬ, один раз
-ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
-ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
-
-// Дальше — твоя логика выбора режима (AP или STA) без повторных init/create
-if (creds_found) {
-    switch_wifi_mode(WIFI_MODE_STA, ssid, pass);
-} else {
-    switch_wifi_mode(WIFI_MODE_AP, NULL, NULL);
-}
+    if (nvs_open("wifi", NVS_READONLY, &nvs) == ESP_OK) {
+        len = sizeof(ssid);
+        if (nvs_get_str(nvs, "ssid", ssid, &len) == ESP_OK) {
+            len = sizeof(pass);
+            if (nvs_get_str(nvs, "pass", pass, &len) == ESP_OK) {
+                creds_found = true;
+            }
+        }
+        nvs_close(nvs);
+    }
+    
+    if (creds_found) {
+        ESP_LOGI(TAG, "Connecting to saved Wi-Fi: %s", ssid);
+        switch_wifi_mode(WIFI_MODE_STA, ssid, pass);
+    } else {
+        wifi_init_ap(); // нет сохранённых — запускаем AP
+    }
+    
 
 
     // Старт в режиме AP при загрузке

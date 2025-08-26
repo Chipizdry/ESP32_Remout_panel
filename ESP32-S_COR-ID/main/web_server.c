@@ -16,7 +16,7 @@ static httpd_handle_t server = NULL;
 void wifi_init_sta(const char *ssid, const char *pass);
 void wifi_init_ap(void);
 
-void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
 
 static esp_err_t set_wifi_handler(httpd_req_t *req);
 
@@ -51,11 +51,8 @@ void switch_wifi_mode(wifi_mode_t mode, const char *ssid, const char *pass) {
         wifi_init_sta(ssid, pass);
     } else if (mode == WIFI_MODE_AP) {
         wifi_init_ap();
-    } else if (mode == WIFI_MODE_APSTA) {
-        wifi_init_ap();
-        wifi_init_sta(ssid, pass);
     }
-}
+}   
 
 
 
@@ -162,53 +159,44 @@ static esp_err_t file_get_handler(httpd_req_t *req) {
 
 
 
+
 static esp_err_t set_wifi_handler(httpd_req_t *req) {
-    char buf[256];
+    char buf[128];
     int len = httpd_req_recv(req, buf, sizeof(buf)-1);
     if (len <= 0) return ESP_FAIL;
     buf[len] = '\0';
 
-    char ssid[33] = {0}, pass[65] = {0}, mode_str[16] = {0};
+    char ssid[33] = {0}, pass[65] = {0};
     cJSON *json = cJSON_Parse(buf);
     if (!json) return ESP_FAIL;
-
     cJSON *js_ssid = cJSON_GetObjectItem(json, "ssid");
     cJSON *js_pass = cJSON_GetObjectItem(json, "password");
-    cJSON *js_mode = cJSON_GetObjectItem(json, "mode");
-
-    if (cJSON_IsString(js_ssid) && cJSON_IsString(js_pass) && cJSON_IsString(js_mode)) {
+    if (cJSON_IsString(js_ssid) && cJSON_IsString(js_pass)) {
         strncpy(ssid, js_ssid->valuestring, sizeof(ssid)-1);
         strncpy(pass, js_pass->valuestring, sizeof(pass)-1);
-        strncpy(mode_str, js_mode->valuestring, sizeof(mode_str)-1);
-
-        wifi_mode_t mode = WIFI_MODE_STA;
-        if (strcmp(mode_str, "STA") == 0) mode = WIFI_MODE_STA;
-        else if (strcmp(mode_str, "AP") == 0) mode = WIFI_MODE_AP;
-        else if (strcmp(mode_str, "STA_AP") == 0) mode = WIFI_MODE_APSTA;
 
         // Сохраняем в NVS
         nvs_handle_t nvs;
         if (nvs_open("wifi", NVS_READWRITE, &nvs) == ESP_OK) {
             nvs_set_str(nvs, "ssid", ssid);
             nvs_set_str(nvs, "pass", pass);
-            nvs_set_str(nvs, "mode", mode_str);
             nvs_commit(nvs);
             nvs_close(nvs);
         }
 
-        switch_wifi_mode(mode, ssid, pass);
+        // Переключаемся в STA
+        switch_wifi_mode(WIFI_MODE_STA, ssid, pass);
 
-        httpd_resp_sendstr(req, "Wi-Fi settings saved and mode switched");
+        httpd_resp_sendstr(req, "Wi-Fi settings saved, trying to connect...");
     } else {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     }
-
     cJSON_Delete(json);
     return ESP_OK;
 }
 
 // Обработчик событий Wi-Fi и IP
- void wifi_event_handler(void* arg, esp_event_base_t event_base,
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     int32_t event_id, void* event_data)
 {
 if (event_base == WIFI_EVENT) {
@@ -229,6 +217,14 @@ ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
 
 // Запуск станции
 void wifi_init_sta(const char *ssid, const char *pass) {
+    esp_netif_create_default_wifi_sta();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
+
     wifi_config_t sta_config = {0};
     strncpy((char*)sta_config.sta.ssid, ssid, sizeof(sta_config.sta.ssid));
     strncpy((char*)sta_config.sta.password, pass, sizeof(sta_config.sta.password));
@@ -243,6 +239,11 @@ void wifi_init_sta(const char *ssid, const char *pass) {
 
 // Запуск точки доступа
 void wifi_init_ap(void) {
+    esp_netif_create_default_wifi_ap();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
     wifi_config_t ap_config = {
         .ap = {
             .ssid = "ESP32_AP",
@@ -260,6 +261,7 @@ void wifi_init_ap(void) {
 
     ESP_LOGI(TAG, "AP started: SSID:%s, PASS:%s", ap_config.ap.ssid, ap_config.ap.password);
 }
+
 
 
 void start_webserver(void) {

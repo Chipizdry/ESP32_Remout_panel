@@ -13,7 +13,6 @@ idf_component_register(
     esp_event lwip
     bt
     json
-    esp_hid
 )
 include_directories(
     "D:/Espressif/frameworks/esp-idf-v5.3.1/v5.3.1/esp-idf/components/esp_littlefs/src/littlefs"
@@ -28,3 +27,16 @@ littlefs_create_partition_image(
                     
 set(PARTITION_TABLE csv)
 set(PARTITION_TABLE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/partitions.csv")
+
+
+# Оптимизация под размер
+target_compile_options(${COMPONENT_LIB} PRIVATE
+    -Os                  # Оптимизация по размеру кода
+    -ffunction-sections  # Каждая функция в отдельной секции
+    -fdata-sections      # Данные тоже в отдельных секциях
+)
+
+# Линковка: выкидываем неиспользуемые секции
+target_link_options(${COMPONENT_LIB} PRIVATE
+    -Wl,--gc-sections
+)

@@ -10,7 +10,7 @@
 #define ADS1115_REG_CONVERT  0x00
 #define ADS1115_REG_CONFIG   0x01
 
-static const char *TAG = "ADS1115";
+
 float ads1115_voltages[ADS1115_NUM_CHANNELS] = {0};
 
 static void ads1115_read_channel(uint8_t channel, float *voltage_out) {
