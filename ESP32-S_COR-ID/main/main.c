@@ -89,28 +89,6 @@ static const uint8_t hid_report_map[] = {
     0x7F,0x75,0x08,0x95,0x03,0x81,0x06,0xC0,0xC0
 };
 
-/* ------------------ Custom Characteristic callback ------------------ */
-
-/*
-static int custom_access_cb(uint16_t conn_handle, uint16_t attr_handle,
-                            struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-    (void)conn_handle;
-    (void)attr_handle;
-    (void)arg;
-
-    if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
-        os_mbuf_append(ctxt->om, hid_report_map, sizeof(hid_report_map));
-        return 0;
-    } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
-        struct os_mbuf *om = ctxt->om;
-       
-        return 0;
-    }
-    return BLE_ATT_ERR_UNLIKELY;
-}
-
-*/
 
 /* ------------------ Access Callbacks ------------------ */
 static int battery_access_cb(uint16_t conn_handle, uint16_t attr_handle,
@@ -298,6 +276,13 @@ gap_event_cb(struct ble_gap_event *event, void *arg)
         case BLE_GAP_EVENT_ADV_COMPLETE:
             printf("Advertisement complete\n");
             break;
+
+        case BLE_GAP_EVENT_SUBSCRIBE:
+            ESP_LOGI(TAG, "Subscribe event: conn_handle=%d attr_handle=%d reason=%d",
+            event->subscribe.conn_handle,
+            event->subscribe.attr_handle,
+            event->subscribe.reason);    
+            break;         
         default:
             break;
     }
@@ -312,7 +297,7 @@ static void ble_app_on_sync(void)
     ESP_LOGI(TAG, "ble_app_on_sync: start");
 
     // Имя устройства
-    ble_svc_gap_device_name_set("ESP32_HID");
+    ble_svc_gap_device_name_set("COR-ID_HID");
 
     // Зарегистрировать свои GATT-сервисы
     rc = ble_gatts_count_cfg(gatt_svcs);
@@ -333,26 +318,34 @@ static void ble_app_on_sync(void)
         return;
     }
 
-    // Параметры рекламы
+    // --- Настройка рекламных параметров ---
     struct ble_gap_adv_params adv_params;
     memset(&adv_params, 0, sizeof(adv_params));
     adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
     adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
 
-
     struct ble_hs_adv_fields fields;
     memset(&fields, 0, sizeof(fields));
+
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-    fields.uuids16 = (ble_uuid16_t[]) { BLE_UUID16_INIT(UUID_HID_SERVICE) };
-    fields.num_uuids16 = 1;
+
+    // Указываем все сервисы для рекламы
+    ble_uuid16_t uuids16[] = {
+        BLE_UUID16_INIT(UUID_HID_SERVICE),
+        BLE_UUID16_INIT(UUID_BATTERY_SERVICE)
+    };
+    fields.uuids16 = uuids16;
+    fields.num_uuids16 = 2;
+
     fields.name = (uint8_t*)"ESP32_HID";
     fields.name_len = strlen("ESP32_HID");
     fields.name_is_complete = 1;
-    fields.appearance = 961; // HID Keyboard
+
+    fields.appearance = 963; // HID Keyboard + Mouse
+
     ble_gap_adv_set_fields(&fields);
 
-
-    // Старт рекламы
+    // Запускаем рекламу
     rc = ble_gap_adv_start(own_addr_type, NULL, BLE_HS_FOREVER,
                            &adv_params, gap_event_cb, NULL);
     if (rc) {
@@ -362,8 +355,6 @@ static void ble_app_on_sync(void)
 
     ESP_LOGI(TAG, "ble_app_on_sync: done, advertising started");
 }
-
-
 
 static void host_task(void *param)
 {
