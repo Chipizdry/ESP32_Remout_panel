@@ -17,7 +17,52 @@
 #include "nvs_flash.h"
 #include "esp_log.h"
 
+
+
+
+// UUIDs
+#define UUID_PRIMARY_SERVICE           ESP_GATT_UUID_PRI_SERVICE
+#define UUID_CHAR                      ESP_GATT_UUID_CHAR_DECLARE
+#define UUID_CHAR_CLIENT_CONFIG        ESP_GATT_UUID_CHAR_CLIENT_CONFIG
+/* ------------------ UUIDs ------------------ */
+#define UUID_HID_SERVICE         0x1812
+#define UUID_BATTERY_SERVICE     0x180F
+#define UUID_HID_INFORMATION     0x2A4A
+#define UUID_HID_REPORT_MAP      0x2A4B
+#define UUID_HID_CONTROL_POINT   0x2A4C
+#define UUID_HID_PROTOCOL_MODE   0x2A4E
+#define UUID_HID_REPORT          0x2A4D
+#define UUID_BATTERY_LEVEL       0x2A19
+#define UUID_TELEMETRY_SERVICE   0xFFF0
+#define UUID_TELEMETRY_DATA      0xFFF1
+
 static const char *TAG = "nimble_app";
+
+
+
+struct report_ref {
+    uint8_t id;   // Report ID
+    uint8_t type; // 1 = Input, 2 = Output, 3 = Feature
+};
+
+
+/* ------------------ Buffers ------------------ */
+static uint8_t hid_kbd_report[8] = {0};
+static uint8_t hid_mouse_report[4] = {0};
+static uint8_t custom_report[20] = {0};
+static uint8_t battery_level = 100;
+
+/* ------------------ HID Constants ------------------ */
+static const uint8_t kbd_report_ref[]   = {0x01, 0x01}; // ID 1, Input
+static const uint8_t mouse_report_ref[] = {0x02, 0x01}; // ID 2, Input
+static const uint8_t hid_info[]         = {0x11, 0x01, 0x00, 0x02}; // ver=1.11, country=0, flags=2
+static const uint8_t hid_protocol_mode[]= {1}; // Report Protocol
+static const uint8_t hid_control_point[]= {0};
+uint8_t adv_data[] = {
+    0x02, 0x01, 0x06,       // Flags
+    0x03, 0x03, 0x12,0x18, // Complete List of 16-bit Service UUIDs (HID 0x1812)
+    0x0F, 0x09, 'E','S','P','3','2','_','H','I','D' // Complete Local Name
+};
 
 /* ------------------ Handles ------------------ */
 static uint16_t battery_level_handle = 0;
@@ -44,25 +89,9 @@ static const uint8_t hid_report_map[] = {
     0x7F,0x75,0x08,0x95,0x03,0x81,0x06,0xC0,0xC0
 };
 
-/*
-
-static int simple_access_cb(uint16_t conn_handle, uint16_t attr_handle,
-    struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-const char *resp = "hello";
-if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
-os_mbuf_append(ctxt->om, resp, strlen(resp));
-return 0;
-} else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
-// просто принять запись
-return 0;
-}
-return BLE_ATT_ERR_UNLIKELY;
-}
-
-*/
-
 /* ------------------ Custom Characteristic callback ------------------ */
+
+/*
 static int custom_access_cb(uint16_t conn_handle, uint16_t attr_handle,
                             struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
@@ -75,134 +104,180 @@ static int custom_access_cb(uint16_t conn_handle, uint16_t attr_handle,
         return 0;
     } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
         struct os_mbuf *om = ctxt->om;
-        /* size_t len = OS_MBUF_PKTLEN(om); // можно использовать, если нужно */
+       
         return 0;
     }
     return BLE_ATT_ERR_UNLIKELY;
 }
 
-/* ------------------ Battery callback ------------------ */
+*/
+
+/* ------------------ Access Callbacks ------------------ */
 static int battery_access_cb(uint16_t conn_handle, uint16_t attr_handle,
-                             struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-    (void)conn_handle; (void)attr_handle; (void)arg;
-    uint8_t level = 100;
-    os_mbuf_append(ctxt->om, &level, sizeof(level));
-    return 0;
+    struct ble_gatt_access_ctxt *ctxt, void *arg) {
+(void)conn_handle; (void)attr_handle; (void)arg;
+os_mbuf_append(ctxt->om, &battery_level, sizeof(battery_level));
+return 0;
 }
 
-/* ------------------ HID callbacks ------------------ */
-static int hid_report_map_access_cb(uint16_t conn_handle, uint16_t attr_handle,
-                                    struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-    (void)conn_handle; (void)attr_handle; (void)arg;
-    os_mbuf_append(ctxt->om, hid_report_map, sizeof(hid_report_map));
-    return 0;
+static int custom_access_cb(uint16_t conn_handle, uint16_t attr_handle,
+   struct ble_gatt_access_ctxt *ctxt, void *arg) {
+(void)conn_handle; (void)attr_handle; (void)arg;
+
+if(ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
+os_mbuf_append(ctxt->om, custom_report, sizeof(custom_report));
+} else if(ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+struct os_mbuf *om = ctxt->om;
+os_mbuf_copydata(om, 0, OS_MBUF_PKTLEN(om), custom_report);
+}
+return 0;
 }
 
-static int hid_kbd_input_access_cb(uint16_t conn_handle, uint16_t attr_handle,
-                                   struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-    (void)conn_handle; (void)attr_handle; (void)arg;
-    uint8_t report[8] = {0};
-    os_mbuf_append(ctxt->om, report, sizeof(report));
-    return 0;
+static int hid_info_cb(uint16_t conn_handle, uint16_t attr_handle,
+struct ble_gatt_access_ctxt *ctxt, void *arg) {
+os_mbuf_append(ctxt->om, hid_info, sizeof(hid_info));
+return 0;
 }
 
-static int hid_mouse_input_access_cb(uint16_t conn_handle, uint16_t attr_handle,
-                                     struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-    (void)conn_handle; (void)attr_handle; (void)arg;
-    uint8_t report[4] = {0};
-    os_mbuf_append(ctxt->om, report, sizeof(report));
-    return 0;
+static int hid_ctrl_point_cb(uint16_t conn_handle, uint16_t attr_handle,
+    struct ble_gatt_access_ctxt *ctxt, void *arg) {
+os_mbuf_append(ctxt->om, hid_control_point, sizeof(hid_control_point));
+return 0;
 }
 
-/* ------------------ GATT services ------------------ */
+static int hid_protocol_cb(uint16_t conn_handle, uint16_t attr_handle,
+  struct ble_gatt_access_ctxt *ctxt, void *arg) {
+os_mbuf_append(ctxt->om, hid_protocol_mode, sizeof(hid_protocol_mode));
+return 0;
+}
 
+static int hid_report_map_cb(uint16_t conn_handle, uint16_t attr_handle,
+    struct ble_gatt_access_ctxt *ctxt, void *arg) {
+os_mbuf_append(ctxt->om, hid_report_map, sizeof(hid_report_map));
+return 0;
+}
+
+static int hid_kbd_cb(uint16_t conn_handle, uint16_t attr_handle,
+struct ble_gatt_access_ctxt *ctxt, void *arg) {
+os_mbuf_append(ctxt->om, hid_kbd_report, sizeof(hid_kbd_report));
+return 0;
+}
+
+static int hid_mouse_cb(uint16_t conn_handle, uint16_t attr_handle,
+struct ble_gatt_access_ctxt *ctxt, void *arg) {
+os_mbuf_append(ctxt->om, hid_mouse_report, sizeof(hid_mouse_report));
+return 0;
+}
+
+static int hid_kbd_report_ref_cb(uint16_t conn_handle, uint16_t attr_handle,
+        struct ble_gatt_access_ctxt *ctxt, void *arg) {
+os_mbuf_append(ctxt->om, kbd_report_ref, sizeof(kbd_report_ref));
+return 0;
+}
+
+static int hid_mouse_report_ref_cb(uint16_t conn_handle, uint16_t attr_handle,
+          struct ble_gatt_access_ctxt *ctxt, void *arg) {
+os_mbuf_append(ctxt->om, mouse_report_ref, sizeof(mouse_report_ref));
+return 0;
+}
+
+
+
+/* ------------------ HID Descriptors ------------------ */
+static const struct ble_gatt_dsc_def hid_kbd_report_ref_desc[] = {
+    {
+        .uuid = BLE_UUID16_DECLARE(0x2904),
+        .att_flags = BLE_ATT_F_READ,
+        .access_cb  = hid_kbd_report_ref_cb,
+    },
+    {0}
+};
+
+static const struct ble_gatt_dsc_def hid_mouse_report_ref_desc[] = {
+    {
+        .uuid = BLE_UUID16_DECLARE(0x2904),
+        .att_flags = BLE_ATT_F_READ,
+        .access_cb  = hid_mouse_report_ref_cb,
+    },
+    {0}
+};
+
+
+
+
+/* ------------------ GATT Services ------------------ */
 static const struct ble_gatt_svc_def gatt_svcs[] = {
-   // End of primary service list placeholder
-
     // Battery Service
     {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = BLE_UUID16_DECLARE(0x180F),
+        .uuid = BLE_UUID16_DECLARE(UUID_BATTERY_SERVICE),
         .characteristics = (struct ble_gatt_chr_def[]) {
             {
-                .uuid = BLE_UUID16_DECLARE(0x2A19),
+                .uuid = BLE_UUID16_DECLARE(UUID_BATTERY_LEVEL),
                 .access_cb = battery_access_cb,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
-                .val_handle = &battery_level_handle,
             },
             {0}
         }
     },
-
     // HID Service
     {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = BLE_UUID16_DECLARE(0x1812),
+        .uuid = BLE_UUID16_DECLARE(UUID_HID_SERVICE),
         .characteristics = (struct ble_gatt_chr_def[]) {
             {
-                .uuid = BLE_UUID16_DECLARE(0x2A4B), // Report Map
-                .access_cb = hid_report_map_access_cb,
+                .uuid = BLE_UUID16_DECLARE(UUID_HID_INFORMATION),
+                .access_cb = hid_info_cb,
                 .flags = BLE_GATT_CHR_F_READ,
             },
             {
-                .uuid = BLE_UUID16_DECLARE(0x2A4D), // Keyboard Input
-                .access_cb = hid_kbd_input_access_cb,
-                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
-                .val_handle = &hid_input_kbd_handle,
+                .uuid = BLE_UUID16_DECLARE(UUID_HID_CONTROL_POINT),
+                .access_cb = hid_ctrl_point_cb,
+                .flags = BLE_GATT_CHR_F_WRITE_NO_RSP,
             },
             {
-                .uuid = BLE_UUID16_DECLARE(0x2A4D), // Mouse Input
-                .access_cb = hid_mouse_input_access_cb,
+                .uuid = BLE_UUID16_DECLARE(UUID_HID_PROTOCOL_MODE),
+                .access_cb = hid_protocol_cb,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE_NO_RSP,
+            },
+            {
+                .uuid = BLE_UUID16_DECLARE(UUID_HID_REPORT_MAP),
+                .access_cb = hid_report_map_cb,
+                .flags = BLE_GATT_CHR_F_READ,
+            },
+            {
+                .uuid = BLE_UUID16_DECLARE(UUID_HID_REPORT),
+                .access_cb = hid_kbd_cb,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
-                .val_handle = &hid_input_mouse_handle,
+                .val_handle = NULL,
+                .descriptors = hid_kbd_report_ref_desc,
+            },
+            {
+                .uuid = BLE_UUID16_DECLARE(UUID_HID_REPORT),
+                .access_cb = hid_mouse_cb,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+                .val_handle = NULL,
+                .descriptors = hid_mouse_report_ref_desc,
             },
             {0}
         }
     },
-
-    // Custom Service
+    // Custom Telemetry Service
     {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = (ble_uuid_t *)&(ble_uuid128_t)BLE_UUID128_INIT(
-            0xab,0x90,0x78,0x56,0x34,0x12,0x34,0x12,
-            0x34,0x12,0x34,0x12,0x78,0x56,0x34,0x12).u,
+        .uuid = BLE_UUID128_DECLARE(0xFFF0),
         .characteristics = (struct ble_gatt_chr_def[]) {
             {
-                .uuid = (ble_uuid_t *)&(ble_uuid128_t)BLE_UUID128_INIT(
-                    0x21,0x43,0x65,0x87,0x21,0x43,0x21,0x43,
-                    0x21,0x43,0x21,0x43,0x21,0x43,0x87,0xba).u,
+                .uuid = BLE_UUID128_DECLARE(0xFFF1),
                 .access_cb = custom_access_cb,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY,
-                .val_handle = &custom_char_handle,
+                .val_handle = NULL,
             },
             {0}
         }
     },
     {0} // End of services
 };
-
-
-/*
-static const struct ble_gatt_svc_def gatt_svcs[] = {
-    {
-        .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = BLE_UUID16_DECLARE(0xFFF0),
-        .characteristics = (struct ble_gatt_chr_def[]) {
-            {
-                .uuid = BLE_UUID16_DECLARE(0xFFF1),
-                .access_cb = simple_access_cb,
-                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY,
-            },
-            {0}
-        }
-    },
-    {0}
-};
-*/
 
 
 /* ------------------ GAP Event Callback ------------------ */
@@ -263,6 +338,19 @@ static void ble_app_on_sync(void)
     memset(&adv_params, 0, sizeof(adv_params));
     adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
     adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
+
+
+    struct ble_hs_adv_fields fields;
+    memset(&fields, 0, sizeof(fields));
+    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+    fields.uuids16 = (ble_uuid16_t[]) { BLE_UUID16_INIT(UUID_HID_SERVICE) };
+    fields.num_uuids16 = 1;
+    fields.name = (uint8_t*)"ESP32_HID";
+    fields.name_len = strlen("ESP32_HID");
+    fields.name_is_complete = 1;
+    fields.appearance = 961; // HID Keyboard
+    ble_gap_adv_set_fields(&fields);
+
 
     // Старт рекламы
     rc = ble_gap_adv_start(own_addr_type, NULL, BLE_HS_FOREVER,
