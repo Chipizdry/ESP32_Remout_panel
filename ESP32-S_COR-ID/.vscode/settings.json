@@ -34,6 +34,7 @@
     "stdlib.h": "c",
     "rgb_led.h": "c",
     "telemetry.h": "c",
-    "esp_wifi.h": "c"
+    "esp_wifi.h": "c",
+    "ble_svc_gap.h": "c"
   }
 }
